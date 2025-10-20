@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EMISSIONS per £1m GVA by UK LOCAL AUTHORITY (2015-2023)</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+  <!-- Leaflet + PapaParse (defer) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js" defer></script>
+
+  <style>
+    :root { --bg:#0b0f19; --panel:#212F47; --text:#e8ecf3; --muted:#c3ccda; --accent:#4f8cff; --border:#2f3e5b; }
+ html, body {
+  height: 100%;
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* --- Header: restore style --- */
+header {
+  grid-column: 1 / -1;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);         /* your navy #212F47 */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+header h1 {
+  margin: 0;
+  font-weight: 800;
+  font-size: 22px;                  /* restore size */
+  letter-spacing: .5px;
+  text-transform: uppercase;        /* BIG CAPS */
+  color: var(--text);               /* ensure visible on navy */
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255,255,255,.08); object-fit: cover; }
+.brand .sub { color: var(--muted); font-size: 12px; }
+
+/* --- KPI: restore “Year” box look --- */
+.kpis {
+  display: grid;
+  grid-template-columns: 1fr;       /* one KPI since you removed Matched */
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.kpi {
+  background: #0e1424;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+.kpi .l {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.kpi .v {
+  font-size: 18px;                  /* bump for emphasis */
+  font-weight: 700;
+  color: var(--text);
+}
+
+#app {
+  display: grid;
+  grid-template-columns: 360px 1fr;   /* widened sidebar */
+  grid-template-rows: auto 1fr;
+  height: 100%;
+}
+
+/* Ensure the map container actually has height */
+main { position: relative; }
+#map { height: 100%; width: 100%; min-height: 400px; }
+
+/* Sidebar */
+aside {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  padding: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;                 /* no horizontal scroll */
+}
+
+/* Header (unchanged from yours) */
+header { grid-column: 1 / -1; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 22px; letter-spacing: .5px; font-weight: 800; margin: 0; text-transform: uppercase; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255,255,255,.08); object-fit: cover; }
+.brand .sub { color: var(--muted); font-size: 12px; }
+
+/* Controls */
+.group { margin-bottom: 16px; }
+.group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+
+input[type="range"],
+input[type="number"],
+button,
+select {
+  width: 100%;
+  max-width: 100%;        /* never wider than sidebar */
+  box-sizing: border-box;
+  background: #0e1424;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+    .legend{position:absolute;bottom:16px;right:16px;background:rgba(20,26,42,.96);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:12px;font-size:12px;line-height:1.2;box-shadow:0 10px 24px rgba(0,0,0,.25);z-index:1000;pointer-events:none}
+    .legend .row{display:flex;align-items:center;gap:8px;margin:4px 0}
+    .swatch{width:16px;height:12px;border-radius:2px;border:1px solid rgba(255,255,255,.1)}
+    .tooltip{background:rgba(20,26,42,.96);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:10px;font-size:12px;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+    .note{font-size:12px;color:var(--muted)}
+    .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+    .kpi{background:#0e1424;border:1px solid var(--border);border-radius:12px;padding:8px 10px}
+    .kpi .v{font-size:16px;font-weight:600}
+    .row-inline{display:flex;gap:8px;align-items:center}
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="brand">
+        <img src="/data/logo.png" alt="logo" />
+        <div>
+          <h1>NEW HORIZON ECONOMICS | EMISSIONS per £1m GVA by UK LOCAL AUTHORITY (2015-2023)</h1>
+          <div class="sub">ONS LAD 2023&#160;·&#160;interactive choropleth</div>
+        </div>
+      </div>
+    </header>
+
+   <aside>
+  <div class="group kpis">
+    <div class="kpi">
+      <div class="l">Year</div>
+      <div class="v" id="kpi-year">—</div>
+    </div>
+  </div>
+
+  <div class="group">
+    <label>Year</label>
+    <input id="yearRange" type="range" min="2015" max="2023" step="1" value="2023"/>
+    <input id="yearInput" type="number" min="2015" max="2023" step="1" value="2023" style="margin-top:6px;"/>
+  </div>
+
+
+    <div class="group">
+  <label>Geography</label>
+  <select id="geoMode">
+    <option value="ITL3" selected>LAD regions</option>
+    <option value="ITL1">ITL1 regions</option>
+  </select>
+</div>
+
+  <div class="group">
+     <label>Metric</label>
+  <select id="metricMode">
+    <option value="total" selected>Total GHG (CO₂e)</option>
+    <option value="co2">CO₂</option>
+    <option value="ch4">CH₄</option>
+    <option value="n2o">N₂O</option>
+  </select>
+</div>
+
+
+  <div class="group row-inline">
+    <button id="playBtn" class="primary" style="flex:1;">▶ Play year</button>
+    <button id="fitBtn" class="primary" style="flex:1;">Reset map</button>
+  </div>
+</aside>
+
+
+    <main style="position:relative;">
+      <div id="map"></div>
+      <div id="legend" class="legend"></div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/proj4@2.9.2/dist/proj4.js" defer></script>
+<script src="https://unpkg.com/proj4leaflet@1.0.2/src/proj4leaflet.js" defer></script>
+
+  
+<script defer>
+// ============== CONFIG YOU CONTROL ==============
+const CSV_URL        = '/data/data.csv';                 // Code,Year,Total,CO2,CH4,N2O(or N20),GVA,ITL1
+const ITL1_GEO_URL   = '/data/itl1_boundaries.geojson';  // ITL1 polygons (codes like TLC…TLN)
+const ITL3_GEO_URL   = '/data/lad_2023.geojson';         // LAD polygons (LAD23CD/LAD23NM) – used as your “ITL3” display
+const ENABLE_ITL3    = true;                             // keep true if you want the LAD layer available
+// Property names in your GeoJSONs:
+const ITL1_CODE_PROP = 'ITL121CD';
+const ITL1_NAME_PROP = 'ITL121NM';
+const ITL3_CODE_PROP = 'LAD23CD'; // LAD file
+const ITL3_NAME_PROP = 'LAD23NM';
+// ================================================
+
+const PALETTE = ['#fff7e6','#ffe8b3','#ffd580','#ffc247','#ffae00','#d89000','#b37400','#8c5a00'];
+const NO_DATA_FILL = '#3a4258';
+
+let map, layer, geoITL1=null, geoITL3=null;
+let rows=[], CSV_KEYS=null;
+let BREAKS={ ITL1:{}, ITL3:{} };
+let year=2023, yearBounds=[2015,2023], metric='total', geo='LAD'; // match your dropdown default
+const MET_KEYS = ['total','co2','ch4','n2o'];
+const K = PALETTE.length;
+
+// ---------- helpers ----------
+const norm = x => String(x??'').trim().toUpperCase();
+// robust numeric coercion (handles commas, narrow no-break spaces, odd minus signs)
+function num(x){
+  if (x==null) return NaN;
+  const s = String(x).replace(/[\s,]+/g,'').replace(/[−–—]/g,'-');
+  const v = +s;
+  return Number.isFinite(v) ? v : NaN;
+}
+function metricLabel(m){
+  return m==='co2' ? 'CO₂ (kt CO₂e) per £1m GVA'
+       : m==='ch4' ? 'CH₄ (kt CO₂e) per £1m GVA'
+       : m==='n2o' ? 'N₂O (kt CO₂e) per £1m GVA'
+                   : 'Total GHG (kt CO₂e) per £1m GVA';
+}
+function quantiles(values, k){
+  const v = values.filter(Number.isFinite).sort((a,b)=>a-b);
+  if(!v.length) return [];
+  const qs=[]; for(let i=0;i<=k;i++){ const p=i/k; const idx=Math.floor(p*(v.length-1)); qs.push(v[idx]); }
+  return qs;
+}
+function colorFor(val, breaks){
+  if(!Number.isFinite(val) || !breaks.length) return NO_DATA_FILL;
+  for(let i=0;i<PALETTE.length;i++){ if(val <= breaks[i+1]) return PALETTE[i]; }
+  return PALETTE[PALETTE.length-1];
+}
+
+// detect headers case-insensitively and with common aliases
+function detectCsvKeys(sampleRow){
+  const headers = Object.keys(sampleRow||{});
+  const find = (cands) => {
+    const idx = headers.findIndex(h => cands.some(c => h.toLowerCase()===c));
+    return idx>=0 ? headers[idx] : null;
+  };
+  const keys = {
+    code: find(['code']),
+    year: find(['year']),
+    total:find(['total']),
+    co2:  find(['co2']),
+    ch4:  find(['ch4']),
+    n2o:  find(['n2o','n20','n₂o']),   // tolerate N20
+    gva:  find(['gva']),
+    itl1: find(['itl1','itl_1'])
+  };
+  return keys;
+}
+// --- Reproject EPSG:27700 (OSGB36 / BNG) GeoJSON -> WGS84 ---
+const EPSG27700_DEF =
+  '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 ' +
+  '+ellps=airy +towgs84=446.448,-125.157,542.06,0.1502,0.2470,0.8421,-20.4894 +units=m +no_defs';
+
+// climb into the first numeric coordinate to test scale
+function firstXY(coords){
+  if (!coords) return null;
+  if (typeof coords[0] === 'number') return coords;
+  for (const c of coords) { const v = firstXY(c); if (v) return v; }
+  return null;
+}
+function isLikelyBNG(geo){
+  try{
+    const xy = firstXY(geo?.features?.[0]?.geometry?.coordinates);
+    if(!xy) return false;
+    const [x,y] = xy;
+    // lat/lng should be small (|x|<=180, |y|<=90); BNG is large (hundreds of thousands)
+    return Math.abs(x) > 180 || Math.abs(y) > 90;
+  }catch{return false;}
+}
+function reproject27700toWGS84(geo){
+  if (!window.proj4) return geo; // safety
+  proj4.defs('EPSG:27700', EPSG27700_DEF);
+  const fwd = (xy) => proj4('EPSG:27700','WGS84', xy);
+  function rp(coords){
+    if (typeof coords[0] === 'number') {
+      const [x,y] = coords; const [lon,lat] = fwd([x,y]); return [lon,lat];
+    }
+    return coords.map(rp);
+  }
+  const out = JSON.parse(JSON.stringify(geo));
+  for (const f of out.features) {
+    if (f.geometry?.coordinates) f.geometry.coordinates = rp(f.geometry.coordinates);
+  }
+  return out;
+}
+
+  
+// ----------------- app bootstrap -----------------
+window.addEventListener('DOMContentLoaded', async ()=>{
+  map = L.map('map',{preferCanvas:true,zoomSnap:0.25,zoomDelta:0.5}).setView([54.9,-3.5],6);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+              {attribution:'&copy; OpenStreetMap, &copy; CARTO'}).addTo(map);
+
+  // Hook controls
+  const yrR=document.getElementById('yearRange'), yrI=document.getElementById('yearInput');
+  yrR.addEventListener('input',e=>{year=+e.target.value; yrI.value=year; render();});
+  yrI.addEventListener('input',e=>{year=+e.target.value; yrR.value=year; render();});
+  document.getElementById('metricMode').addEventListener('change', e=>{ metric=e.target.value; render(); });
+  document.getElementById('fitBtn').addEventListener('click', fitUK);
+  document.getElementById('playBtn').addEventListener('click', togglePlay);
+  const geoSel = document.getElementById('geoMode');
+  geo = geoSel.value; // keep script state in sync with dropdown
+  geoSel.addEventListener('change', e=>{ geo=e.target.value; swapLayer(); render(); });
+
+  try{
+  await loadAll();
+computeBreaks();
+
+// Force initial view to ITL1 so you can verify it
+
+swapLayer();
+fitUK();
+render();
+
+  }catch(err){
+    console.error(err);
+    alert('Failed to load one or more resources — check the console for details.');
+  }
+});
+
+// ------------------- loading ---------------------
+async function loadAll(){
+  // CSV
+  const res = await fetch(CSV_URL, {cache:'no-store'});
+  console.log('[NET] CSV', CSV_URL, res.status);
+  if(!res.ok) throw new Error('CSV fetch failed');
+  const text = await res.text();
+  const parsed = Papa.parse(text, {header:true, dynamicTyping:false, skipEmptyLines:true});
+  rows = parsed.data || [];
+  console.log('[CSV] rows:', rows.length);
+
+  if(!rows.length) throw new Error('CSV parsed with 0 rows');
+  CSV_KEYS = detectCsvKeys(rows[0]);
+  console.log('[CSV] detected keys:', CSV_KEYS);
+  const required = ['code','year','total','co2','ch4','n2o','gva','itl1'];
+  const missing = required.filter(k => !CSV_KEYS[k]);
+  if(missing.length){
+    console.error('Missing required CSV columns:', missing);
+    throw new Error('CSV header mismatch — see console for missing columns');
+  }
+
+  // normalise values to numbers in-place for performance
+  rows = rows.map(r => ({
+    code: norm(r[CSV_KEYS.code]),
+    year: +r[CSV_KEYS.year],
+    total: num(r[CSV_KEYS.total]),
+    co2:   num(r[CSV_KEYS.co2]),
+    ch4:   num(r[CSV_KEYS.ch4]),
+    n2o:   num(r[CSV_KEYS.n2o]),
+    gva:   num(r[CSV_KEYS.gva]),
+    itl1:  norm(r[CSV_KEYS.itl1])
+  }));
+
+  // years
+  const yrs = [...new Set(rows.map(r => r.year))].filter(Number.isFinite).sort((a,b)=>a-b);
+  if(yrs.length){ yearBounds=[yrs[0], yrs[yrs.length-1]]; }
+  const yrR=document.getElementById('yearRange'), yrI=document.getElementById('yearInput');
+  yrR.min=yearBounds[0]; yrR.max=yearBounds[1]; yrI.min=yearBounds[0]; yrI.max=yearBounds[1];
+  year = Math.min(Math.max(year, yearBounds[0]), yearBounds[1]); yrR.value=year; yrI.value=year;
+
+// ITL1 GeoJSON
+const g1 = await fetch(ITL1_GEO_URL, {cache:'no-store'});
+if(!g1.ok) throw new Error('ITL1 geo fetch failed');
+let rawITL1 = await g1.json();
+if (isLikelyBNG(rawITL1)) {
+  console.log('[ITL1] Detected EPSG:27700; reprojecting to WGS84…');
+  geoITL1 = reproject27700toWGS84(rawITL1);
+} else {
+  geoITL1 = rawITL1;
+}
+console.log('[ITL1] features:', geoITL1?.features?.length||0);
+
+// ITL3 (your LAD file) GeoJSON
+if (ENABLE_ITL3) {
+  const g3 = await fetch(ITL3_GEO_URL, {cache:'no-store'});
+  if(!g3.ok) throw new Error('ITL3 geo fetch failed');
+  let rawITL3 = await g3.json();
+  if (isLikelyBNG(rawITL3)) {
+    console.log('[ITL3/LAD] Detected EPSG:27700; reprojecting to WGS84…');
+    geoITL3 = reproject27700toWGS84(rawITL3);
+  } else {
+    geoITL3 = rawITL3;
+  }
+  console.log('[ITL3/LAD] features:', geoITL3?.features?.length||0);
+}
+}
+
+// ---------- ratios & breaks ----------
+function ratiosITL3(y){
+  // Group by ITL3 code (your CSV Code column is ITL3; the layer is LAD so the join will be empty,
+  // but we still compute this faithfully in case you swap to a true ITL3 polygon file later)
+  const by = new Map();
+  for(const r of rows){ if(r.year!==y) continue;
+    const code = r.code;
+    if(!by.has(code)) by.set(code, []);
+    by.get(code).push(r);
+  }
+  const out = new Map();
+  for(const [code, arr] of by.entries()){
+    let numT=0, numC=0, numM=0, numN=0, den=0;
+    for(const r of arr){
+      if(Number.isFinite(r.total)) numT += r.total;
+      if(Number.isFinite(r.co2))   numC += r.co2;
+      if(Number.isFinite(r.ch4))   numM += r.ch4;
+      if(Number.isFinite(r.n2o))   numN += r.n2o;
+      if(Number.isFinite(r.gva))   den  += r.gva;
+    }
+    out.set(code, {
+      total: den? numT/den : NaN,
+      co2:   den? numC/den : NaN,
+      ch4:   den? numM/den : NaN,
+      n2o:   den? numN/den : NaN
+    });
+  }
+  return out;
+}
+
+function ratiosITL1(y){
+  const agg = new Map(); // ITL1 -> {num:{…}, den}
+  for(const r of rows){
+    if(r.year!==y) continue;
+    const k = r.itl1;
+    if(!agg.has(k)) agg.set(k, {t:0,c:0,m:0,n:0, g:0});
+    const a = agg.get(k);
+    if(Number.isFinite(r.total)) a.t += r.total;
+    if(Number.isFinite(r.co2))   a.c += r.co2;
+    if(Number.isFinite(r.ch4))   a.m += r.ch4;
+    if(Number.isFinite(r.n2o))   a.n += r.n2o;
+    if(Number.isFinite(r.gva))   a.g += r.gva;
+  }
+  const out = new Map();
+  for(const [k,a] of agg.entries()){
+    const d = a.g || 0;
+    out.set(k, {
+      total: d? a.t/d : NaN,
+      co2:   d? a.c/d : NaN,
+      ch4:   d? a.m/d : NaN,
+      n2o:   d? a.n/d : NaN
+    });
+  }
+  return out;
+}
+
+// Build fixed breaks over all years for each (geo, metric)
+function computeBreaks(){
+  const years = [...new Set(rows.map(r=>r.year))].filter(Number.isFinite);
+  const collate = (fn) => {
+    const acc = { total:[], co2:[], ch4:[], n2o:[] };
+    for(const y of years){
+      const m = fn(y);
+      for(const obj of m.values()){
+        MET_KEYS.forEach(k => { if(Number.isFinite(obj[k])) acc[k].push(obj[k]); });
+      }
+    }
+    return acc;
+  };
+
+  const itl1Vals = collate(ratiosITL1);
+  BREAKS.ITL1 = {
+    total: quantiles(itl1Vals.total, K),
+    co2:   quantiles(itl1Vals.co2,   K),
+    ch4:   quantiles(itl1Vals.ch4,   K),
+    n2o:   quantiles(itl1Vals.n2o,   K)
+  };
+  if(ENABLE_ITL3){
+    const itl3Vals = collate(ratiosITL3);
+    BREAKS.ITL3 = {
+      total: quantiles(itl3Vals.total, K),
+      co2:   quantiles(itl3Vals.co2,   K),
+      ch4:   quantiles(itl3Vals.ch4,   K),
+      n2o:   quantiles(itl3Vals.n2o,   K)
+    };
+  }
+
+  console.log('[BREAKS] ITL1', BREAKS.ITL1);
+  if(ENABLE_ITL3) console.log('[BREAKS] ITL3', BREAKS.ITL3);
+}
+
+// --------------- map drawing ----------------
+function baseStyle(){ return { color:'#9fb6e6', weight:1.1, fillColor:NO_DATA_FILL, fillOpacity:0.9 }; }
+
+function bindFeature(f, l, codeProp, nameProp){
+  l.on({
+    mouseover:e=>{ e.target.setStyle({weight:2,color:'#fff',fillColor:e.target._currentFill,fillOpacity:1}); },
+    mouseout:e=>{ e.target.setStyle({weight:1.1,color:'#9fb6e6',fillColor:e.target._currentFill,fillOpacity:0.9}); },
+    click:()=> map.fitBounds(l.getBounds(), {maxZoom:9})
+  });
+  l._codeProp = codeProp; l._nameProp = nameProp;
+}
+
+function swapLayer(){
+  if(layer) map.removeLayer(layer);
+  if(geo==='ITL1'){
+    if(!geoITL1){ console.warn('ITL1 geo not loaded yet'); return; }
+    layer = L.geoJSON(geoITL1, { style: baseStyle, onEachFeature:(f,l)=>bindFeature(f,l,ITL1_CODE_PROP,ITL1_NAME_PROP) }).addTo(map);
+  }else{
+    if(!ENABLE_ITL3){ geo='ITL1'; return swapLayer(); }
+    if(!geoITL3){ console.warn('ITL3 (LAD) geo not loaded yet'); return; }
+    layer = L.geoJSON(geoITL3, { style: baseStyle, onEachFeature:(f,l)=>bindFeature(f,l,ITL3_CODE_PROP,ITL3_NAME_PROP) }).addTo(map);
+  }
+}
+
+function render(){
+  if(!layer) return;
+  document.getElementById('kpi-year').textContent = year;
+
+  const breaks = (BREAKS[geo]||{})[metric] || [];
+  const vals   = (geo==='ITL1') ? ratiosITL1(year) : ratiosITL3(year);
+
+  let matched=0, total=0;
+  layer.eachLayer(l=>{
+    total++;
+    const f=l.feature; const code = norm(f.properties[l._codeProp]); const name = String(f.properties[l._nameProp]||'');
+    const rec = vals.get(code); const v = rec ? rec[metric] : NaN;
+    const fill = colorFor(v, breaks); l._currentFill = fill; l.setStyle({fillColor:fill});
+    const txt = Number.isFinite(v) ? v.toFixed(3) : 'No data';
+    l.bindTooltip(`<div><strong>${name}</strong><br/><span class="note">${code}</span><br/>${metricLabel(metric)}: <strong>${txt}</strong></div>`,
+      {sticky:true, opacity:0.95, className:'tooltip'});
+    if(Number.isFinite(v)) matched++;
+  });
+
+  updateLegend(breaks);
+  console.log(`Render ${geo}/${metric} ${year}: matched ${matched} of ${total}`);
+}
+
+function updateLegend(breaks){
+  const el=document.getElementById('legend');
+  // friendly display names
+  const geoLabel = geo === 'ITL3' ? 'LAD' :
+                   geo === 'ITL1' ? 'Region' : geo;
+  let html = `<div style="margin-bottom:6px;font-weight:700;text-transform:uppercase;">
+    ${metricLabel(metric)} — ${geoLabel} (fixed scale, ${yearBounds[0]}–${yearBounds[1]})
+  </div>`;
+  if(!breaks.length){ html += `<div class="row"><span class="swatch" style="background:${NO_DATA_FILL}"></span> No data</div>`; el.innerHTML=html; return; }
+  for(let i=0;i<PALETTE.length;i++){ const a=breaks[i], b=breaks[i+1]; if(a==null||b==null) continue;
+    html += `<div class="row"><span class="swatch" style="background:${PALETTE[i]}"></span> ${a.toFixed(3)} – ${b.toFixed(3)}</div>`;
+  }
+  html += `<div class="row"><span class="swatch" style="background:${NO_DATA_FILL}"></span> No data</div>`;
+  el.innerHTML = html;
+}
+
+function fitUK(){ if(!layer) return; const tight = layer.getBounds().pad(-0.05); map.fitBounds(tight, {padding:[20,20]}); }
+let timer=null;
+function togglePlay(){
+  const btn=document.getElementById('playBtn');
+  if(timer){ clearInterval(timer); timer=null; btn.textContent='▶ Play year'; return; }
+  btn.textContent='⏸ Pause';
+  const [minY,maxY]=yearBounds;
+  timer=setInterval(()=>{ year = (year>=maxY)?minY:(year+1); document.getElementById('yearRange').value=year; document.getElementById('yearInput').value=year; render(); }, 1200);
+}
+</script>
