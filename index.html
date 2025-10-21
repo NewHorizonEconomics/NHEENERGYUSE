@@ -494,11 +494,16 @@ function render(){
   // console.log(`Render ${geo}/${unit} ${year}: matched ${matched} of ${total}`);
 }
 
+// Safe number formatter (add this if it's missing or overwrite any older version)
+function fmt(x){
+  return Number.isFinite(x) ? Number(x).toFixed(3) : '—';
+}
+
+// Legend builder (complete)
 function updateLegend(breaks){
   const el = document.getElementById('legend');
   if (!el) return;
 
-  // 2-line title: metric on top, area/scale on the next line
   const areaLine = (geo === 'ITL1')
     ? `ITL1 regions (fixed scale, ${yearBounds[0]}–${yearBounds[1]})`
     : `LAD (fixed scale, ${yearBounds[0]}–${yearBounds[1]})`;
@@ -528,12 +533,12 @@ function updateLegend(breaks){
   }
 
   html += `<div class="row"><span class="swatch" style="background:${NO_DATA_FILL}"></span> No data</div>`;
-
   el.innerHTML = html;
 
-  // keep current hidden/shown state
+  // keep current hidden/shown state (only if you added the toggle helper)
   if (typeof applyLegendVisibility === 'function') applyLegendVisibility();
 }
+
 
 
   if(!breaks.length){ html += `<div class="row"><span class="swatch" style="background:${NO_DATA_FILL}"></span> No data</div>`; el.innerHTML=html; return; }
