@@ -500,43 +500,27 @@ function fmt(x){
 }
 
 // Legend builder (complete)
+
+  updateLegend(breaks);
+  console.log(`Render ${geo}/${metric} ${year}: matched ${matched} of ${total}`);
+}
+
 function updateLegend(breaks){
-  const el = document.getElementById('legend');
-  if (!el) return;
-
-  const areaLine = (geo === 'ITL1')
-    ? `ITL1 regions (fixed scale, ${yearBounds[0]}–${yearBounds[1]})`
-    : `LAD (fixed scale, ${yearBounds[0]}–${yearBounds[1]})`;
-
-  let html = `
-    <div style="margin-bottom:6px; font-weight:700; text-transform:uppercase; line-height:1.3;">
-      ${metricLabel(metric)}<br/>
-      <span style="font-weight:400; color:var(--muted);">${areaLine}</span>
-    </div>
-  `;
-
-  if (!breaks || !breaks.length) {
-    html += `<div class="row"><span class="swatch" style="background:${NO_DATA_FILL}"></span> No data</div>`;
-    el.innerHTML = html;
-    if (typeof applyLegendVisibility === 'function') applyLegendVisibility();
-    return;
+  const el=document.getElementById('legend');
+  // friendly display names
+  const geoLabel = geo === 'ITL3' ? 'LAD' :
+                   geo === 'ITL1' ? 'Region' : geo;
+  let html = `<div style="margin-bottom:6px;font-weight:700;text-transform:uppercase;">
+    ${metricLabel(metric)} — ${geoLabel} (fixed scale, ${yearBounds[0]}–${yearBounds[1]})
+  </div>`;
+  if(!breaks.length){ html += `<div class="row"><span class="swatch" style="background:${NO_DATA_FILL}"></span> No data</div>`; el.innerHTML=html; return; }
+  for(let i=0;i<PALETTE.length;i++){ const a=breaks[i], b=breaks[i+1]; if(a==null||b==null) continue;
+    html += `<div class="row"><span class="swatch" style="background:${PALETTE[i]}"></span> ${a.toFixed(3)} – ${b.toFixed(3)}</div>`;
   }
-
-  for (let i = 0; i < PALETTE.length; i++) {
-    const a = breaks[i], b = breaks[i+1];
-    if (a == null || b == null) continue;
-    html += `
-      <div class="row">
-        <span class="swatch" style="background:${PALETTE[i]}"></span>
-        ${fmt(a)} – ${fmt(b)}
-      </div>`;
-  }
-
   html += `<div class="row"><span class="swatch" style="background:${NO_DATA_FILL}"></span> No data</div>`;
   el.innerHTML = html;
+  applyLegendVisibility();
 
-  // keep current hidden/shown state (only if you added the toggle helper)
-  if (typeof applyLegendVisibility === 'function') applyLegendVisibility();
 }
 
 
