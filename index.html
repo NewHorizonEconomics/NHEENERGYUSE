@@ -496,38 +496,41 @@ function render(){
 }
 
 // ---------- LEGEND ----------
+  function fmt(x){
+  return Number.isFinite(x) ? x.toFixed(3) : '—';
+}
+
 function updateLegend(breaks){
   const el = document.getElementById('legend');
-  if (!el) return;
-
-  const areaLine = (geo === 'ITL1')
-    ? `ITL1 regions (fixed scale, ${yearBounds[0]}–${yearBounds[1]})`
-    : `LAD (fixed scale, ${yearBounds[0]}–${yearBounds[1]})`;
+  const geoLabel = (geo === 'ITL3') ? 'LAD' : 'Region';
 
   let html = `
-    <div style="margin-bottom:6px;font-weight:700;text-transform:uppercase;line-height:1.3;">
+    <div style="margin-bottom:6px;font-weight:700;text-transform:uppercase;line-height:1.25">
       ${unitLabel(unit)}<br/>
-      <span style="font-weight:400;color:var(--muted);">${areaLine}</span>
+      <span style="font-weight:400;color:var(--muted)">
+        ${geoLabel} · fixed scale ${yearBounds[0]}–${yearBounds[1]}
+      </span>
     </div>
   `;
 
-  if(!breaks.length){
+  if(!breaks || !breaks.length){
     html += `<div class="row"><span class="swatch" style="background:${NO_DATA_FILL}"></span> No data</div>`;
     el.innerHTML = html;
     applyLegendVisibility();
     return;
   }
 
-  for(let i=0;i<PALETTE.length;i++){
-    const a=breaks[i], b=breaks[i+1];
-    if(a==null||b==null) continue;
+  for (let i = 0; i < PALETTE.length; i++){
+    const a = breaks[i], b = breaks[i+1];
+    if (a == null || b == null) continue;
     html += `<div class="row"><span class="swatch" style="background:${PALETTE[i]}"></span> ${fmt(a)} – ${fmt(b)}</div>`;
   }
-
   html += `<div class="row"><span class="swatch" style="background:${NO_DATA_FILL}"></span> No data</div>`;
+
   el.innerHTML = html;
   applyLegendVisibility();
 }
+
 
 function fitUK(){ if(!layer) return; const tight = layer.getBounds().pad(-0.05); map.fitBounds(tight, {padding:[20,20]}); }
 let timer=null;
