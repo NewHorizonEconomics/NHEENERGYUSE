@@ -172,6 +172,10 @@ select {
     <button id="playBtn" class="primary" style="flex:1;">▶ Play year</button>
     <button id="fitBtn" class="primary" style="flex:1;">Reset map</button>
   </div>
+     <div class="group">
+  <button id="legendToggle" class="primary" style="width:100%;">Hide legend</button>
+</div>
+
 </aside>
 
 
@@ -213,6 +217,7 @@ const KTOE_TO_GWH = 11.63;
 let map, layer, geoITL1=null, geoLAD=null;
 let rows=[], CSV_KEYS=null;
 let BREAKS={ ITL1:[], ITL3:[] };  // fixed breaks per geography in base unit (ktoe/£1m)
+let legendVisible = JSON.parse(localStorage.getItem('legendVisible') ?? 'true');
 
 // ---------- helpers ----------
 const norm = x => String(x??'').trim().toUpperCase();
@@ -232,6 +237,18 @@ function colorFor(val, breaks){
   for(let i=0;i<PALETTE.length;i++){ if(val <= breaks[i+1]) return PALETTE[i]; }
   return PALETTE[PALETTE.length-1];
 }
+  function applyLegendVisibility() {
+  const legend = document.getElementById('legend');
+  const btn = document.getElementById('legendToggle');
+  if (!legend) return;
+
+  legend.style.display = legendVisible ? 'block' : 'none';
+  if (btn) btn.textContent = legendVisible ? 'Hide legend' : 'Show legend';
+
+  // persist across reloads
+  localStorage.setItem('legendVisible', JSON.stringify(legendVisible));
+}
+
 const unitLabel = (u)=> u==='gwh' ? 'GWh per £1m GVA' : 'ktoe per £1m GVA';
 const applyUnit = (v,u)=> !Number.isFinite(v)? v : (u==='gwh' ? v*KTOE_TO_GWH : v);
 
@@ -293,12 +310,31 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('fitBtn').addEventListener('click', fitUK);
   document.getElementById('playBtn').addEventListener('click', togglePlay);
 
+  const legendBtn = document.getElementById('legendToggle');
+if (legendBtn) {
+  legendBtn.addEventListener('click', () => {
+    legendVisible = !legendVisible;
+    applyLegendVisibility();
+  });
+}
+
   const geoSel = document.getElementById('geoMode'); // your dropdown with LAD/ITL1
   if (geoSel) {
     geoSel.value = 'ITL3'; // default to LADs
     geo = 'ITL3';
     geoSel.addEventListener('change', e=>{ geo=e.target.value; swapLayer(); render(); });
   }
+window.addEventListener('DOMContentLoaded', ()=>{
+  const legend = document.getElementById('legend');
+  const btn = document.getElementById('legendToggle');
+  if (!legend || !btn) return;
+
+  btn.addEventListener('click', ()=>{
+    const hidden = legend.style.display === 'none';
+    legend.style.display = hidden ? 'block' : 'none';
+    btn.textContent = hidden ? 'Hide legend' : 'Show legend';
+  });
+});
 
   try{
     await loadAll();
@@ -306,6 +342,8 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     swapLayer();
     fitUK();
     render();
+    applyLegendVisibility();
+
   }catch(err){
     console.error(err);
     alert('Failed to load one or more resources — check the console.');
@@ -469,6 +507,8 @@ function updateLegend(breaks){
   }
   html += `<div class="row"><span class="swatch" style="background:${NO_DATA_FILL}"></span> No data</div>`;
   el.innerHTML = html;
+  applyLegendVisibility();
+
 }
 
 function fitUK(){ if(!layer) return; const tight = layer.getBounds().pad(-0.05); map.fitBounds(tight, {padding:[20,20]}); }
